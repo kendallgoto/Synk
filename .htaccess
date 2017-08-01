@@ -1,0 +1,15 @@
+DirectoryIndex index.html
+
+RewriteEngine On
+
+#index.php
+RewriteRule ^index/r/([a-zA-Z0-9]+)$ index.html?room=$1
+RewriteRule ^index/r/([a-zA-Z0-9]+)/$ index.html?room=$1
+RewriteRule ^index/r/([a-zA-Z0-9]+)/n/$ index.html?room=$1&name=
+RewriteRule ^index/r/([a-zA-Z0-9]+)/n/([a-zA-Z0-9]+)$ index.html?room=$1&name=$2
+RewriteRule ^index/r/([a-zA-Z0-9]+)/n/([a-zA-Z0-9]+)/$ index.html?room=$1&name=$2
+RewriteRule ^r/([a-zA-Z0-9]+)$ index.html?room=$1
+RewriteRule ^r/([a-zA-Z0-9]+)/$ index.html?room=$1
+RewriteRule ^r/([a-zA-Z0-9]+)/n/$ index.html?room=$1&name=$2
+RewriteRule ^r/([a-zA-Z0-9]+)/n/([a-zA-Z0-9]+)$ index.html?room=$1&name=$2
+RewriteRule ^r/([a-zA-Z0-9]+)/n/([a-zA-Z0-9]+)/$ index.html?room=$1&name=$2
