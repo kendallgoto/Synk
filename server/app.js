@@ -1,6 +1,7 @@
 var fs = require('fs')
     , http = require('http')
     , socketio = require('socket.io')({ path: '/ws/socket.io'});
+const { exec } = require('child_process');
 var server = http.createServer(function(req, res) {
     res.writeHead(200, { 'Content-type': 'text/html'});
     res.end(fs.readFileSync('/home/public/ws/index.html'));
@@ -103,14 +104,32 @@ socketr.of('/ws').on('connection', function (socket) {
         socket.broadcast.to(socketToRoom[socket.id]).emit('play');
 	});
 	socket.on('newLink', function(link) {
-		if(socket != rooms[socketToRoom[socket.id]]['leader'])
+		if(socket != rooms[socketToRoom[socket.id]]['leader']) 
 			return;
 	    if(!validate(link)) {
 			return;
 		}
+		if(link.indexOf('https://www.youtube.com/watch') >= 0) {
+			//It's a youtube link!! Patch this ...
+			console.log("youtube link detected");
+			exec('/home/protected/youtube-dl -g '+link, (err, stdout, stderr) => {
+			  if (!err) {
+			  		console.log(`stdout: ${stdout}`);
+					link = stdout;
+					if(link.indexOf("https", 3) > -1)
+						link = link.substring(0, link.indexOf("https", 3)).trim();
+					
+			        socketr.of('/ws').in(socketToRoom[socket.id]).emit('newLink', link);
+					rooms[socketToRoom[socket.id]]['link'] = link;
+			        socketr.of('/ws').in(socketToRoom[socket.id]).emit('newSubs', " ");
+					rooms[socketToRoom[socket.id]]['sub'] = "";
+				}	
+			});
+			return;
+		}
         socket.broadcast.to(socketToRoom[socket.id]).emit('newLink', link);
 		rooms[socketToRoom[socket.id]]['link'] = link;
-        socket.broadcast.to(socketToRoom[socket.id]).emit('newSubs', " ");
+        socketr.of('/ws').in(socketToRoom[socket.id]).emit('newSubs', " ");
 		rooms[socketToRoom[socket.id]]['sub'] = "";
 	});
 	socket.on('newSubs', function(link) {
@@ -156,11 +175,11 @@ socketr.of('/ws').on('connection', function (socket) {
 					}
 				}
 				delete rooms[socketToRoom[socket.id]]['names'][key];
+				socketr.of('/ws').in(socketToRoom[socket.id]).emit('playerList', Object.keys(rooms[socketToRoom[socket.id]]['names']));
 				delete socketToRoom[socket.id];
 				return;
 			}
 		}
-		socketr.of('/ws').in(name.roomcode).emit('playerList', Object.keys(rooms[name.roomcode]['names']));
     });
 	
 });

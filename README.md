@@ -1,5 +1,5 @@
 # LiveSynk
-Livesync is a socket-based online chat room service that allows users to syncronize playback of video to all members in the server. It's general purpose is to watch videos or shows with friends, syncronizing the video automatically.
+Livesynk is a socket-based online chat room service that allows users to syncronize playback of video to all members in the server. It's general purpose is to watch videos or shows with friends, syncronizing the video automatically.
 
 ## Features
   - Video Sync (delay is <2000ms at worst)
