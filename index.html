@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="LiveSync - The Cytube that doesn't suck">
+    <meta name="author" content="Kendall Goto">
+    <title>LiveSync</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<link rel="stylesheet" href="http://kgo.to/livesync/style.css">
+
+	<style>
+	body {
+	  min-height: 100px;
+	}
+
+	.navbar-static-top {
+	  margin-bottom: 19px;
+	}
+	.chatBox {
+		max-height: 200px;
+		height: 200px;
+	}
+	.my-video-dimensions {
+		width: 100%;
+	}
+	.chatBox {
+		overflow-y: scroll;
+		overflow-x: hidden;
+	}
+	.leader { 	
+		background-color: #7e7f37;
+	}
+	.slow {
+		background-color: #7f3737;
+	}
+	body > .container {
+		display: none;
+	}
+	.message {
+		word-break: break-word;
+	}
+	.video-js .vjs-text-track-display > div > div > div {
+		color: white !important;
+		background-color: rgba(0, 0, 0, 0) !important;
+		text-shadow: rgb(34, 34, 34) 0px 0px 4px, rgb(34, 34, 34) 0px 0px 4px, rgb(34, 34, 34) 0px 0px 4px, rgb(34, 34, 34) 0px 0px 4px !important;
+		
+	}
+	</style>
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+	<link href="http://vjs.zencdn.net/5.19.1/video-js.css" rel="stylesheet">	
+  </head>
+
+  <body>
+    <nav class="navbar navbar-default navbar-static-top">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand">LiveSync</a>
+        </div>
+      </div>
+    </nav>
+
+	<div id="dc">Please wait ... connecting to server</div>
+    <div class="container" style="">
+		<div class="col-lg-4" style="">
+			<div class="well chat" style="">
+				<h3>Chat</h3>
+				<p>Active:</p>
+				<ul id="list">
+				</ul>
+				<br>
+				<a href="javascript:muter();">Mute Msgs</a>
+				<hr>
+				<div class="chatBox" style="">
+				</div>
+				<br>
+				<input type="text" name="message" id="textBox" placeholder="Say something ..." class="form-control"></input>
+	
+			</div>
+			<div style="clear: both;"></div>
+		</div>
+		<div class="col-lg-8">
+		    <video id="my-video" class="video-js vjs-big-play-centered" controls preload="auto" width="100%" data-setup="{}">
+		      <source src="http://kgo.to/livesync/yuki.mp4" type='video/mp4'>				  
+		    </video>
+			<br>
+		    <div class="input-group input-group-sm" id="inputSelect">
+		      <input type="text" class="form-control" placeholder="Video URL" disabled>
+		      <span class="input-group-btn">
+		        <button class="btn btn-primary" onclick="submitLink()" disabled>Play</button>
+		      </span>
+		    </div>
+			<br>
+		    <div class="input-group input-group-sm" id="subSelect">
+		      <input type="text" class="form-control" placeholder="Subtitle URL" disabled>
+		      <span class="input-group-btn">
+		        <button class="btn btn-primary" onclick="submitSubs()" disabled>Subs</button>
+		      </span>
+		    </div>
+		</div>
+
+    </div> <!-- /container -->
+    <script src="http://vjs.zencdn.net/5.19.1/video.js"></script>
+	
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.5/socket.io.min.js" integrity="sha256-A+2KjJZFFxJ7QA7RQhSh0dQuNY6VockhLC9klp0DVjM=" crossorigin="anonymous"></script>
+	
+	<script>
+		//parse url header
+		//http:, "", kgo.to, livesync, r, 
+		var url = window.location.href;
+		// /r/
+		var rHead = url.indexOf('/r/');
+		var rTail = url.indexOf('/', rHead+3);
+		var roomName = url.substring(rHead+3, rTail);
+		if(rHead == -1)
+			roomName = "";
+		// /n/
+		var nHead = url.indexOf('/n/');
+		var userName = url.substring(nHead+3);
+		if(nHead == -1)
+			userName = "";
+		if(roomName == "" && userName == "") {
+			$('body').html("kgo.to/r/roomcode/n/yourusername"); 
+			throw new Error("No name presented");
+		}
+		if(userName == "") {
+			$('body').html("pick a name bako taco! it goes after the /n/"); 
+			throw new Error("No name presented");
+		}
+		if(userName.length > 10) {
+			$('body').html("pick a shorter name cheater!!"); 
+			throw new Error("Name too long");
+		}
+		
+    	var socket = io("/ws", {transports: ['websocket'], path: '/ws/socket.io'});
+	
+		$(document).ready(function() {
+			videojs('#my-video').ready(function() {
+				
+				$(window).on('resize', function(){
+					$('.my-videojs-dimensions').height($('.my-video-dimensions').width() / 16 * 9);
+				});
+			    videojs('#my-video').on('ended', function() {
+					socket.emit('videoDone');
+			    });
+				
+			    videojs('#my-video').volume(0.05);
+				$('.my-video-dimensions').height($('.my-video-dimensions').width() / 16 * 9);
+			});
+			videojs('#my-video').on('pause', function() {
+				paused = true;
+				if(isLeader)
+					socket.emit('pause');
+			});
+			videojs('#my-video').on('play', function() {
+				paused = false;
+				if(isLeader)
+					socket.emit('play');
+			});
+			$('#textBox').keyup(function(e){
+			    if(e.keyCode == 13)
+			    {
+					if($('#textBox').val() == "") return;
+					if($('#textBox').val() == "/next") {
+						socket.emit('videoDone');
+						
+						$('#textBox').val("");
+						return;
+					}
+						
+					//addMessage($('#textBox').val(), "me");
+			        socket.emit('message', {msg: $('#textBox').val(), name: userName});
+					$('#textBox').val("");
+			    }
+			}); 	
+		});
+		function validate(text) {
+			return  /^(https?|ftp):\/\/(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i.test(text);
+			
+		}
+		function submitLink() {
+			var link = $("#inputSelect input").val();
+		    if(!validate(link)) {
+				$("#inputSelect input").val("invalid url");
+				return;
+			}
+			videojs('#my-video').src({type: 'video/mp4', src: link});
+			for(var i = 0; i < videojs('#my-video').remoteTextTracks().length; i++) {
+				videojs('#my-video').removeRemoteTextTrack(videojs('#my-video').remoteTextTracks()[i]);
+			}
+			$("#subSelect input").val("");
+			socket.emit('newLink', link);
+		}
+		function submitSubs() {
+			var link = $("#subSelect input").val();
+		    if(!validate(link)) {
+				$("#subSelect input").val("subs");
+				return;
+			}
+			for(var i = 0; i < videojs('#my-video').remoteTextTracks().length; i++) {
+				videojs('#my-video').removeRemoteTextTrack(videojs('#my-video').remoteTextTracks()[i]);
+			}
+			videojs('#my-video').addRemoteTextTrack({
+				kind: 'captions',
+				label: 'English',
+				language: 'en',
+				id: 'subtrack',
+				src: "http://livesync.kgo.to/corsbypass.php?url="+link
+			});
+			socket.emit('newSubs', link);
+		}
+		var returner = 0;
+		var int = setInterval(function() {
+			if(returner == 1) {
+				//higher than 2s delay. kill
+				$('.navbar').addClass("slow");
+				/*
+				$('body').html("disconnected / not available. please refresh the page <3");
+				socket.disconnect();
+				socket = null;
+				clearInterval(int);
+				return;
+				*/
+			}
+			else {
+				$('.navbar').removeClass("slow");
+			}
+		  startTime = Date.now();
+		  if(!isLeader)
+			  $('.vjs-big-play-button, .vjs-tech, .vjs-play-control').css('pointer-events', 'none');
+		  else
+			  $('.vjs-big-play-button, .vjs-tech, .vjs-play-control').css('pointer-events', 'auto');
+		  if(isLeader && !paused)
+		 	 socket.emit('pinger', videojs('#my-video').currentTime());
+		  else
+			  socket.emit('pinger', -1);
+		  returner = 1;
+		}, 2000);
+		var first = 0;
+		socket.on('newLink', function(link) {
+			//we have a connection (first time)
+			if(first == 0) {
+				first = 1;
+				$('body > .container').css('display', 'block');
+				$('#dc').remove();
+				$('.my-video-dimensions').height($('.my-video-dimensions').width() / 16 * 9);
+			}
+			if(isLeader)
+				socket.emit('pause');
+			
+			videojs('#my-video').src({type: 'video/mp4', src: link});
+			$("#inputSelect input").val(link);
+		});
+		
+		socket.on('newSubs', function(link) {
+			//we have a connection (first time)
+			if(link == "")
+				return;
+			for(var i = 0; i < videojs('#my-video').remoteTextTracks().length; i++) {
+				videojs('#my-video').removeRemoteTextTrack(videojs('#my-video').remoteTextTracks()[i]);
+			}
+			if(link == " ") {
+				$("#subSelect input").val("");
+				return;
+			}
+			videojs('#my-video').addRemoteTextTrack({
+				kind: 'captions',
+				label: 'English',
+				language: 'en',
+				id: 'subtrack',
+				src: "https://crossorigin.me/"+link
+			});
+			$("#subSelect input").val(link);
+		});
+		
+
+		socket.on('ponger', function() {
+		  latency = Date.now() - startTime;
+		  returner = 0;
+		});
+		socket.on('message', function(msg) {
+			addMessage(msg.msg, msg.name);
+		});
+		socket.on('pause', function(msg) {
+			videojs('#my-video').pause();
+		});
+		socket.on('play', function(msg) {
+			videojs('#my-video').play();
+		});
+		socket.on('playerList', function(list) {
+			$('#list').empty();
+			for(var key in list) {
+				$('<li class="person">'+list[key]+'</div>').appendTo('#list');
+			}
+		});
+		socket.emit('connected', {name:userName, roomcode:roomName});
+		addMessage("CONNECTED", userName);
+		socket.on('byebye', function() {
+			$('body').html("disconnected. please pick a name that isn't already used dummy");
+			clearInterval(int);
+			socket.disconnect();
+			socket = null;
+		});
+		socket.on('synco', function(time) {
+			videojs('#my-video').play();
+			if(Math.abs(time - videojs('#my-video').currentTime()) > 1)
+				videojs('#my-video').currentTime(time);
+		});
+		var isLeader = false;
+		var paused = true;
+		socket.on('isLeader', function() {
+			isLeader = true;
+			$('.navbar').addClass('leader');
+			$('#inputSelect input').prop('disabled', false);
+			$('#inputSelect button').prop('disabled', false);
+			$('#subSelect input').prop('disabled', false);
+			$('#subSelect button').prop('disabled', false);
+			
+		});
+		
+		socket.on('isNotLeader', function() {
+			isLeader  = false;
+			$('.leader').removeClass('leader');
+			$('#inputSelect input').prop('disabled', true);
+			$('#inputSelect button').prop('disabled', true);
+			$('#subSelect input').prop('disabled', false);
+			$('#subSelect button').prop('disabled', false);
+			
+		});
+		var mute = false;
+		function muter() {
+			mute = !mute;
+		}
+		
+		function addMessage(msg, user) {
+			var audio = new Audio('http://kgo.to/livesync/click.ogg');
+			if(!mute)
+				audio.play();
+			var time = new Date().toLocaleTimeString().replace(/([\d]+:[\d]{2})(:[\d]{2})(.*)/, "$1$3");
+			$('<div class="message"><div class="col-lg-4 timestamp">'+time+'</div><div class="col-lg-8 message"><b class="user">'+user+':</b> <span class="message">'+msg+'</span></div><div style="clear: both;"></div></div>').appendTo('.chatBox');
+			$('.chatBox').scrollTop($('.chatBox')[0].scrollHeight);
+			
+		}
+	</script>
+	
+  </body>
+</html>
