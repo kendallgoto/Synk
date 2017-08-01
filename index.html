@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="LiveSync - The Cytube that doesn't suck">
+    <meta name="description" content="LiveSynk - Watch with friends, across the globe.">
     <meta name="author" content="Kendall Goto">
-    <title>LiveSync</title>
+    <title>LiveSynk</title>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-<link rel="stylesheet" href="http://kgo.to/livesync/style.css">
+<link rel="stylesheet" href="http://syn.kgo.to/style.css">
 
 	<style>
 	body {
@@ -59,7 +59,7 @@
     <nav class="navbar navbar-default navbar-static-top">
       <div class="container">
         <div class="navbar-header">
-          <a class="navbar-brand">LiveSync</a>
+          <a class="navbar-brand">LiveSynk</a>
         </div>
       </div>
     </nav>
@@ -85,7 +85,6 @@
 		</div>
 		<div class="col-lg-8">
 		    <video id="my-video" class="video-js vjs-big-play-centered" controls preload="auto" width="100%" data-setup="{}">
-		      <source src="http://kgo.to/livesync/yuki.mp4" type='video/mp4'>				  
 		    </video>
 			<br>
 		    <div class="input-group input-group-sm" id="inputSelect">
@@ -111,8 +110,6 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.5/socket.io.min.js" integrity="sha256-A+2KjJZFFxJ7QA7RQhSh0dQuNY6VockhLC9klp0DVjM=" crossorigin="anonymous"></script>
 	
 	<script>
-		//parse url header
-		//http:, "", kgo.to, livesync, r, 
 		var url = window.location.href;
 		// /r/
 		var rHead = url.indexOf('/r/');
@@ -211,7 +208,7 @@
 				label: 'English',
 				language: 'en',
 				id: 'subtrack',
-				src: "http://livesync.kgo.to/corsbypass.php?url="+link
+				src: "https://crossorigin.me/"+link
 			});
 			socket.emit('newSubs', link);
 		}
@@ -339,7 +336,7 @@
 		}
 		
 		function addMessage(msg, user) {
-			var audio = new Audio('http://kgo.to/livesync/click.ogg');
+			var audio = new Audio('http://syn.kgo.to/click.ogg');
 			if(!mute)
 				audio.play();
 			var time = new Date().toLocaleTimeString().replace(/([\d]+:[\d]{2})(:[\d]{2})(.*)/, "$1$3");
